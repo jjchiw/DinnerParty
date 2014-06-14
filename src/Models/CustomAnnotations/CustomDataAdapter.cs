@@ -12,27 +12,26 @@ namespace DinnerParty.Models.CustomAnnotations
     {
         protected readonly ValidationAttribute attribute;
 
-        public CustomDataAdapter(MatchAttribute attribute)
+        public bool CanHandle(ValidationAttribute attribute)
         {
-            this.attribute = attribute;
+            return attribute.GetType() == typeof(MatchAttribute);
         }
 
-        public IEnumerable<ModelValidationRule> GetRules()
+        public IEnumerable<ModelValidationRule> GetRules(ValidationAttribute attribute, System.ComponentModel.PropertyDescriptor descriptor)
         {
             yield return new ModelValidationRule("custom", attribute.FormatErrorMessage,
                 new[] { ((MatchAttribute)attribute).SourceProperty });
         }
 
-        public IEnumerable<ModelValidationError> Validate(object instance)
+        public IEnumerable<ModelValidationError> Validate(object instance, ValidationAttribute attribute, System.ComponentModel.PropertyDescriptor descriptor)
         {
             var context =
-                new ValidationContext(instance, null, null)
-                {
-                    MemberName = ((MatchAttribute)attribute).SourceProperty
-                };
+            new ValidationContext(instance, null, null)
+            {
+                MemberName = ((MatchAttribute)attribute).SourceProperty
+            };
 
-            var result =
-         attribute.GetValidationResult(instance, context);
+            var result = attribute.GetValidationResult(instance, context);
 
             if (result != null)
             {
@@ -40,7 +39,7 @@ namespace DinnerParty.Models.CustomAnnotations
             }
 
             yield break;
-        }
 
+        }
     }
 }

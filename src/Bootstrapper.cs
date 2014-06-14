@@ -4,14 +4,12 @@ using Nancy.TinyIoc;
 using Nancy.Validation.DataAnnotations;
 using DinnerParty.Models.CustomAnnotations;
 using Nancy.Bootstrapper;
-using DinnerParty.Models.RavenDB;
 using Nancy.Diagnostics;
 using System;
-using Raven.Client;
 using DinnerParty.Models;
-using Raven.Abstractions.Data;
-using Raven.Client.Connection;
-using Raven.Client.Document;
+using System.Linq;
+using Arango.Client;
+using DinnerParty.Helpers;
 
 namespace DinnerParty
 {
@@ -25,13 +23,25 @@ namespace DinnerParty
             Cassette.Nancy.CassetteNancyStartup.OptimizeOutput = true;
 #endif
 
-            DataAnnotationsValidator.RegisterAdapter(typeof(MatchAttribute), (v, d) => new CustomDataAdapter((MatchAttribute)v));
+            EnsureCollectionsExists();
 
-            var docStore = container.Resolve<DocumentStore>("DocStore");
+            //DataAnnotationsValidator.RegisterAdapter(typeof(MatchAttribute), (v, d) => new CustomDataAdapter((MatchAttribute) v));
 
-            CleanUpDB(docStore);
+            //var validatorFactory = new DefaultPropertyValidatorFactory(new IDataAnnotationsValidatorAdapter[]{
+            //    new CustomDataAdapter()
+            //});
 
-            Raven.Client.Indexes.IndexCreation.CreateIndexes(typeof(Dinners_Index).Assembly, docStore);
+            
+            
+
+
+
+            
+            //var docStore = container.Resolve<DocumentStore>("DocStore");
+
+            //CleanUpDB(docStore);
+
+            //Raven.Client.Indexes.IndexCreation.CreateIndexes(typeof(Dinners_Index).Assembly, docStore);
 
             pipelines.OnError += (context, exception) =>
             {
@@ -40,18 +50,44 @@ namespace DinnerParty
             };
         }
 
+        private static void EnsureCollectionsExists()
+        {
+            var type = typeof(IModelBase);
+            var types = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(s => s.GetTypes())
+                .Where(p => type.IsAssignableFrom(p) && !p.IsInterface && !p.IsAbstract)
+                .ToList();
+
+
+            foreach (var t in types)
+            {
+                var db = new ArangoDatabase(DinnerPartyConfiguration.ArangoDbAlias);
+                var modelBase = Activator.CreateInstance(t) as IModelBase;
+
+                var collection = db.Collection.Get(modelBase.CollectionName);
+                if (collection == null)
+                {
+                    collection = new ArangoCollection();
+                    collection.Name = modelBase.CollectionName;
+                    collection.Type = ArangoCollectionType.Document;
+                    db.Collection.Create(collection);
+                }
+            }
+        }
+
         protected override void ConfigureApplicationContainer(TinyIoCContainer container)
         {
             base.ConfigureApplicationContainer(container);
 
-            var store = new DocumentStore
-            {
-                ConnectionStringName = "RavenDB1"
-            };
+            //var store = new DocumentStore
+            //{
+            //    ConnectionStringName = "RavenDB1"
+            //};
 
-            store.Initialize();
+            //store.Initialize();
 
-            container.Register(store, "DocStore");
+            var db = new ArangoDatabase(DinnerPartyConfiguration.ArangoDbAlias);
+            container.Register<ArangoDatabase>(db);
         }
 
         protected override void RequestStartup(TinyIoCContainer container, Nancy.Bootstrapper.IPipelines pipelines, NancyContext context)
@@ -80,10 +116,10 @@ namespace DinnerParty
 
             container.Register<IUserMapper, UserMapper>();
 
-            var docStore = container.Resolve<DocumentStore>("DocStore");
-            var documentSession = docStore.OpenSession();
+            //var docStore = container.Resolve<DocumentStore>("DocStore");
+            //var documentSession = docStore.OpenSession();
 
-            container.Register<IDocumentSession>(documentSession);
+            //container.Register<IDocumentSession>(documentSession);
         }
 
         protected override void ConfigureConventions(Nancy.Conventions.NancyConventions nancyConventions)
@@ -97,58 +133,58 @@ namespace DinnerParty
             get { return new DiagnosticsConfiguration { Password = @"nancy" }; }
         }
 
-        private void CleanUpDB(DocumentStore documentStore)
-        {
-            var docSession = documentStore.OpenSession();
-            var configInfo = docSession.Load<Config>("DinnerParty/Config");
+//        private void CleanUpDB(DocumentStore documentStore)
+//        {
+//            var docSession = documentStore.OpenSession();
+//            var configInfo = docSession.Load<Config>("DinnerParty/Config");
 
-            if (configInfo == null)
-            {
-                configInfo = new Config();
-                configInfo.Id = "DinnerParty/Config";
-                configInfo.LastTruncateDate = DateTime.Now.AddHours(-48); //No need to delete data if config doesnt exist but setup ready for next time
+//            if (configInfo == null)
+//            {
+//                configInfo = new Config();
+//                configInfo.Id = "DinnerParty/Config";
+//                configInfo.LastTruncateDate = DateTime.Now.AddHours(-48); //No need to delete data if config doesnt exist but setup ready for next time
 
-                docSession.Store(configInfo);
-                docSession.SaveChanges();
+//                docSession.Store(configInfo);
+//                docSession.SaveChanges();
 
-                return;
-            }
-            else
-            {
-                if ((DateTime.Now - configInfo.LastTruncateDate).TotalHours < 24)
-                    return;
-
-
-                configInfo.LastTruncateDate = DateTime.Now;
-                docSession.SaveChanges();
-
-                //If database size >15mb or 1000 documents delete documents older than a week
-
-#if DEBUG
-                var jsonData =
-                    documentStore.JsonRequestFactory.CreateHttpJsonRequest(null, "http://localhost:8080/database/size", "GET", documentStore.Credentials, documentStore.Conventions).ReadResponseJson();
-#else
-                var jsonData =
-                    documentStore.JsonRequestFactory.CreateHttpJsonRequest(null, "https://aeo.ravenhq.com/databases/DinnerParty-DinnerPartyDB/database/size", "GET", documentStore.Credentials, documentStore.Conventions).ReadResponseJson();
-#endif
-                int dbSize = int.Parse(jsonData.SelectToken("DatabaseSize").ToString());
-                long docCount = documentStore.DatabaseCommands.GetStatistics().CountOfDocuments;
+//                return;
+//            }
+//            else
+//            {
+//                if ((DateTime.Now - configInfo.LastTruncateDate).TotalHours < 24)
+//                    return;
 
 
-                if (docCount > 1000 || dbSize > 15000000) //its actually 14.3mb but goood enough
-                {
+//                configInfo.LastTruncateDate = DateTime.Now;
+//                docSession.SaveChanges();
 
-                    documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName",
-                                              new IndexQuery
-                                              {
-                                                  Query = docSession.Advanced.LuceneQuery<object>()
-                                                  .WhereEquals("Tag", "Dinners")
-                                                  .AndAlso()
-                                                  .WhereLessThan("LastModified", DateTime.Now.AddDays(-7)).ToString()
-                                              },
-                                              false);
-                }
-            }
-        }
+//                //If database size >15mb or 1000 documents delete documents older than a week
+
+//#if DEBUG
+//                var jsonData =
+//                    documentStore.JsonRequestFactory.CreateHttpJsonRequest(null, "http://localhost:8080/database/size", "GET", documentStore.Credentials, documentStore.Conventions).ReadResponseJson();
+//#else
+//                var jsonData =
+//                    documentStore.JsonRequestFactory.CreateHttpJsonRequest(null, "https://aeo.ravenhq.com/databases/DinnerParty-DinnerPartyDB/database/size", "GET", documentStore.Credentials, documentStore.Conventions).ReadResponseJson();
+//#endif
+//                int dbSize = int.Parse(jsonData.SelectToken("DatabaseSize").ToString());
+//                long docCount = documentStore.DatabaseCommands.GetStatistics().CountOfDocuments;
+
+
+//                if (docCount > 1000 || dbSize > 15000000) //its actually 14.3mb but goood enough
+//                {
+
+//                    documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName",
+//                                              new IndexQuery
+//                                              {
+//                                                  Query = docSession.Advanced.LuceneQuery<object>()
+//                                                  .WhereEquals("Tag", "Dinners")
+//                                                  .AndAlso()
+//                                                  .WhereLessThan("LastModified", DateTime.Now.AddDays(-7)).ToString()
+//                                              },
+//                                              false);
+//                }
+//            }
+//        }
     }
 }

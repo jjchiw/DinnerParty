@@ -3,34 +3,34 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using DinnerParty.Models;
-using DinnerParty.Models.RavenDB;
 using Nancy;
 using Nancy.Authentication.Forms;
 using Nancy.Security;
 using Raven.Client;
+using Arango.Client;
 
 namespace DinnerParty
 {
     public class UserMapper : IUserMapper
     {
-        private IDocumentSession DocumentSession;
+        private ArangoDatabase _db;
 
-        public UserMapper(IDocumentSession DocumentSession)
+        public UserMapper(ArangoDatabase db)
         {
-            this.DocumentSession = DocumentSession;
+            this._db = db;
 
         }
 
         public IUserIdentity GetUserFromIdentifier(Guid identifier, NancyContext context)
         {
-            var userRecord = DocumentSession.Query<UserModel, IndexUserLogin>().Where(x => x.UserId == identifier).FirstOrDefault();
+            var userRecord = _db.Query<UserModel, IndexUserLogin>().Where(x => x.UserId == identifier).FirstOrDefault();
 
             return userRecord == null ? null : new UserIdentity() { UserName = userRecord.Username, FriendlyName = userRecord.FriendlyName };
         }
 
         public Guid? ValidateUser(string username, string password)
         {
-            var userRecord = DocumentSession.Query<UserModel, IndexUserLogin>().Where(x => x.Username == username && x.Password == EncodePassword(password)).FirstOrDefault();
+            var userRecord = _db.Query<UserModel, IndexUserLogin>().Where(x => x.Username == username && x.Password == EncodePassword(password)).FirstOrDefault();
 
             if (userRecord == null)
             {
@@ -52,12 +52,12 @@ namespace DinnerParty
                 Password = EncodePassword(newUser.Password)
             };
 
-            var existingUser = DocumentSession.Query<UserModel, IndexUserLogin>().Where(x => x.EMailAddress == userRecord.EMailAddress && x.LoginType == "DinnerParty").FirstOrDefault();
+            var existingUser = _db.Query<UserModel, IndexUserLogin>().Where(x => x.EMailAddress == userRecord.EMailAddress && x.LoginType == "DinnerParty").FirstOrDefault();
             if (existingUser != null)
                 return null;
 
-            DocumentSession.Store(userRecord);
-            DocumentSession.SaveChanges();
+            _db.Store(userRecord);
+            _db.SaveChanges();
 
             return userRecord.UserId;
         }
