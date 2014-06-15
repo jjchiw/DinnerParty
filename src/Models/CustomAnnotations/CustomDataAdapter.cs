@@ -35,7 +35,7 @@ namespace DinnerParty.Models.CustomAnnotations
 
             if (result != null)
             {
-                yield return new ModelValidationError(result.MemberNames, attribute.FormatErrorMessage);
+                yield return new ModelValidationError(result.MemberNames, result.ErrorMessage);
             }
 
             yield break;

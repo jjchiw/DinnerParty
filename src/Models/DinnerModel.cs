@@ -3,39 +3,13 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Newtonsoft.Json;
+using Arango.Client;
 
 namespace DinnerParty.Models
 {
-    public class Dinner
+    public class Dinner : ArangoModelBase
     {
-        /// <summary>
-        /// Id (in that exact case) is used by Raven.
-        /// If on a Url of /dinners/edit/162 Nancy will bind the Id property to 162 so,
-        /// we have to make sure that it starts with dinners/ so Raven can identify it properly
-        /// </summary>
-        private string id;
-        public string Id
-        {
-            get { return id; }
-            set
-            {
-                if (!value.StartsWith("dinners"))
-                    value = "dinners/" + value;
-
-                id = value;
-            }
-        }
-
-        //[HiddenInput(DisplayValue = false)]
-        [JsonIgnore]
-        public int DinnerID
-        {
-            get
-            {
-                return int.Parse(Id.Substring(Id.LastIndexOf("/") + 1));
-            }
-        }
-
+        
         [Required(ErrorMessage = "Title is required")]
         [StringLength(50, ErrorMessage = "Title may not be longer than 50 characters")]
         public string Title { get; set; }
@@ -72,7 +46,7 @@ namespace DinnerParty.Models
 
         public string HostedById { get; set; }
 
-        public virtual ICollection<RSVP> RSVPs { get; set; }
+        public List<RSVP> RSVPs { get; set; }
 
         public bool IsHostedBy(string userName)
         {
@@ -86,6 +60,7 @@ namespace DinnerParty.Models
 
         [UIHint("LocationDetail")]
         [JsonIgnore]
+        [ArangoProperty(Serializable=false)]
         public LocationDetail Location
         {
             get

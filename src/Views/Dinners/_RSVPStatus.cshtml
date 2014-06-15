@@ -20,7 +20,7 @@
                  $("#CancelRSVP").click(function (event) {
                      $.ajax({
                          type: 'POST',
-                         url: '/RSVP/Cancel/@Model.Dinner.DinnerID',
+                         url: '/RSVP/Cancel/@Model.Dinner.Id',
                          success: function (data) {
                              $("#rsvpmsg").html(data);
                              $("#rsvpmsg").animate({ fontSize: "1.5em" }, 400);
@@ -41,7 +41,7 @@
                   $("#RegisterRSVP").click(function (event) {
                       $.ajax({
                           type: 'POST',
-                          url: '/RSVP/Register/@Model.Dinner.DinnerID',
+                          url: '/RSVP/Register/@Model.Dinner.Id',
                           success: function (data) {
                               $("#rsvpmsg").html(data);
                               $("#rsvpmsg").animate({ fontSize: "1.5em" }, 400);

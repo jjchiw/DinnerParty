@@ -4,19 +4,40 @@ using System.Linq;
 using System.Web;
 using DinnerParty.Models;
 using Nancy;
-using DinnerParty.Models.RavenDB;
-using Raven.Client;
+using Arango.Client;
+using DinnerParty.Infrastructure;
 
 namespace DinnerParty.Modules
 {
     public class ServicesModule : BaseModule
     {
-        public ServicesModule(IDocumentSession documentSession)
+        public ServicesModule(ArangoDatabase _db)
             : base("/services")
         {
             Get["/RSS"] = parameters =>
                 {
-                    var dinners = documentSession.Query<Dinner, Dinners_Index>().Where(d => d.EventDate > DateTime.Now.Date).OrderBy(x => x.EventDate).AsEnumerable();
+
+                    var where = string.Format(@" 
+                                                FILTER DATE_TIMESTAMP(item.EventDate) == DATE_TIMESTAMP('{0}')
+                                                SORT item.EventDate
+                                                LIMIT {1}", DateTime.Now.Date.ToString("u"), Request.Form.limit);
+
+                    ArangoQueryOperation whereOperation = new ArangoQueryOperation().Aql(where);
+
+                    var dinners = _db.Query.DinnersIndex(whereOperation)
+                        .Select(x =>
+                            new Dinner
+                            {
+                                _Id = x._Id,
+                                HostedBy = x.HostedBy,
+                                HostedById = x.HostedById,
+                                Title = x.Title,
+                                Latitude = x.Latitude,
+                                Longitude = x.Longitude,
+                                Description = x.Description,
+                                EventDate = x.EventDate,
+                            }
+                        );
 
                     if (dinners == null)
                     {

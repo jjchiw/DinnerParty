@@ -5,7 +5,6 @@ using System.Web;
 using Nancy;
 using System.Dynamic;
 using DinnerParty.Models;
-using Raven.Client;
 
 namespace DinnerParty.Modules
 {

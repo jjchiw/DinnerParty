@@ -5,9 +5,8 @@ using System.Web;
 using Nancy;
 using DinnerParty.Models;
 using Nancy.RouteHelpers;
-using DinnerParty.Models.RavenDB;
-using Raven.Client;
-using Raven.Client.Linq;
+using Arango.Client;
+using DinnerParty.Infrastructure;
 
 namespace DinnerParty.Modules
 {
@@ -15,7 +14,7 @@ namespace DinnerParty.Modules
 
     public class SearchModule : BaseModule
     {
-        public SearchModule(IDocumentSession documentSession)
+        public SearchModule(ArangoDatabase db)
             : base("/search")
         {
             Post["/GetMostPopularDinners"] = parameters =>
@@ -25,12 +24,17 @@ namespace DinnerParty.Modules
                     if (!this.Request.Form.limit.HasValue || String.IsNullOrWhiteSpace(this.Request.Form.limit))
                         this.Request.Form.limit = 40;
 
-                    var jsonDinners = documentSession.Query<JsonDinner, Dinners_Index>()
-                        .Where(x => x.EventDate >= DateTime.Now.Date)
-                        .Take((int)this.Request.Form.limit)
-                        .OrderByDescending(x => x.RSVPCount)
-                        .AsProjection<JsonDinner>()
-                        .ToList();
+                    var where = string.Format(@" 
+                                                FILTER DATE_TIMESTAMP(item.EventDate) == DATE_TIMESTAMP('{0}')
+                                                SORT item.EventDate
+                                                LIMIT {1}", DateTime.Now.Date.ToString("u"), Request.Form.limit);
+
+                    ArangoQueryOperation whereOperation = new ArangoQueryOperation().Aql(where);
+
+                    var sortOperation = new ArangoQueryOperation().Aql(_ => _.SORT(_.Var("item.RSVPCount")).Direction(ArangoSortDirection.DESC));
+
+                    var jsonDinners = db.Query.DinnersIndex(whereOperation, sortOperation)
+                                                .Select(x => JsonDinnerFromDinner(x));
 
                     return Response.AsJson(jsonDinners);
                 };
@@ -41,10 +45,20 @@ namespace DinnerParty.Modules
                 double latitude = (double)this.Request.Form.latitude;
                 double longitude = (double)this.Request.Form.longitude;
 
-                var dinners = documentSession.Query<Dinner, Dinners_Index>()
-                                .Where(x => x.EventDate > DateTime.Now.Date)
-                                .AsEnumerable()
-                                .Where(x => DistanceBetween(x.Latitude, x.Longitude, latitude, longitude) < 1000).Select(x => JsonDinnerFromDinner(x));
+
+                var where = string.Format(@" 
+                                                FILTER DATE_TIMESTAMP(item.EventDate) == DATE_TIMESTAMP('{0}')
+                                                SORT item.EventDate
+                                                LIMIT {1}", DateTime.Now.Date.ToString("u"), Request.Form.limit);
+
+                ArangoQueryOperation whereOperation = new ArangoQueryOperation().Aql(where);
+
+                var sortOperation = new ArangoQueryOperation().Aql(_ => _.SORT(_.Var("item.RSVPCount")).Direction(ArangoSortDirection.DESC));
+
+                var dinners = db.Query.DinnersIndex(whereOperation, sortOperation)
+                                            .AsEnumerable()
+                                            .Where(x => DistanceBetween(x.Latitude, x.Longitude, latitude, longitude) < 1000)
+                                            .Select(x => JsonDinnerFromDinner(x));
 
                 return Response.AsJson(dinners.ToList());
             };
@@ -118,7 +132,7 @@ namespace DinnerParty.Modules
         {
             return new JsonDinner
             {
-                DinnerID = dinner.DinnerID,
+                DinnerID = dinner.Id,
                 EventDate = dinner.EventDate,
                 Latitude = dinner.Latitude,
                 Longitude = dinner.Longitude,

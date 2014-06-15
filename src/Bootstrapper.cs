@@ -22,7 +22,6 @@ namespace DinnerParty
 #if !DEBUG
             Cassette.Nancy.CassetteNancyStartup.OptimizeOutput = true;
 #endif
-
             EnsureCollectionsExists();
 
             //DataAnnotationsValidator.RegisterAdapter(typeof(MatchAttribute), (v, d) => new CustomDataAdapter((MatchAttribute) v));
@@ -52,7 +51,7 @@ namespace DinnerParty
 
         private static void EnsureCollectionsExists()
         {
-            var type = typeof(IModelBase);
+            var type = typeof(ArangoModelBase);
             var types = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(s => s.GetTypes())
                 .Where(p => type.IsAssignableFrom(p) && !p.IsInterface && !p.IsAbstract)
@@ -62,13 +61,13 @@ namespace DinnerParty
             foreach (var t in types)
             {
                 var db = new ArangoDatabase(DinnerPartyConfiguration.ArangoDbAlias);
-                var modelBase = Activator.CreateInstance(t) as IModelBase;
+                var collectionName = ArangoModelBase.GetCollectionName(t);
 
-                var collection = db.Collection.Get(modelBase.CollectionName);
+                var collection = db.Collection.Get(collectionName);
                 if (collection == null)
                 {
                     collection = new ArangoCollection();
-                    collection.Name = modelBase.CollectionName;
+                    collection.Name = collectionName;
                     collection.Type = ArangoCollectionType.Document;
                     db.Collection.Create(collection);
                 }
@@ -79,12 +78,11 @@ namespace DinnerParty
         {
             base.ConfigureApplicationContainer(container);
 
-            //var store = new DocumentStore
-            //{
-            //    ConnectionStringName = "RavenDB1"
-            //};
-
-            //store.Initialize();
+            ArangoClient.AddConnection(DinnerPartyConfiguration.ArangoDbHost,
+                DinnerPartyConfiguration.ArangoDbPort,
+                DinnerPartyConfiguration.ArangoDbIsSecured,
+                DinnerPartyConfiguration.ArangoDbName,
+                DinnerPartyConfiguration.ArangoDbAlias);
 
             var db = new ArangoDatabase(DinnerPartyConfiguration.ArangoDbAlias);
             container.Register<ArangoDatabase>(db);

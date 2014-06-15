@@ -7,7 +7,7 @@ namespace DinnerParty.Models
 {
     public class JsonDinner
     {
-        public int DinnerID { get; set; }
+        public long DinnerID { get; set; }
         public DateTime EventDate { get; set; }
         public string Title { get; set; }
         public double Latitude { get; set; }

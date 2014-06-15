@@ -10,16 +10,15 @@ using Nancy.ModelBinding;
 using DinnerParty.Models;
 using System.Configuration;
 using System.Net;
-using DinnerParty.Models.RavenDB;
 using Newtonsoft.Json;
-using Raven.Client;
-using Raven.Client.Document;
+using Arango.Client;
+using DinnerParty.Infrastructure;
 
 namespace DinnerParty.Modules
 {
     public class AccountModule : BaseModule
     {
-        public AccountModule(IDocumentSession documentSession)
+        public AccountModule(ArangoDatabase db)
             : base("/account")
         {
             Get["/logon"] = parameters =>
@@ -37,7 +36,7 @@ namespace DinnerParty.Modules
                     var model = this.Bind<LoginModel>();
                     var result = this.Validate(model);
 
-                    var userMapper = new UserMapper(documentSession);
+                    var userMapper = new UserMapper(db);
                     var userGuid = userMapper.ValidateUser(model.UserName, model.Password);
 
                     if (userGuid == null || !result.IsValid)
@@ -46,10 +45,14 @@ namespace DinnerParty.Modules
 
                         foreach (var item in result.Errors)
                         {
-                            foreach (var member in item.MemberNames)
+                            foreach (var err in item.Value)
                             {
-                                base.Page.Errors.Add(new ErrorModel() { Name = member, ErrorMessage = item.GetMessage(member) });
+                                foreach (var member in err.MemberNames)
+                                {
+                                    base.Page.Errors.Add(new ErrorModel() { Name = member, ErrorMessage = err.ErrorMessage });
+                                }
                             }
+                            
                         }
 
                         if (userGuid == null && base.Page.Errors.Count == 0)
@@ -99,16 +102,20 @@ namespace DinnerParty.Modules
 
                         foreach (var item in result.Errors)
                         {
-                            foreach (var member in item.MemberNames)
+                            foreach (var err in item.Value)
                             {
-                                base.Page.Errors.Add(new ErrorModel() { Name = member, ErrorMessage = item.GetMessage(member) });
+                                foreach (var member in err.MemberNames)
+                                {
+                                    base.Page.Errors.Add(new ErrorModel() { Name = member, ErrorMessage = err.ErrorMessage });
+                                }
                             }
+
                         }
 
                         return View["Register", base.Model];
                     }
 
-                    var userMapper = new UserMapper(documentSession);
+                    var userMapper = new UserMapper(db);
                     var userGUID = userMapper.ValidateRegisterNewUser(model);
 
                     //User already exists
@@ -164,25 +171,31 @@ namespace DinnerParty.Modules
                 if (j.profile.email != null)
                     email = j.profile.email.ToString();
 
-                var user = documentSession.Query<UserModel, IndexUserLogin>().Where(x => x.LoginType == userIdentity).FirstOrDefault();
-                              
+                var whereOperation = new ArangoQueryOperation().Aql(_ =>
+                              _.FILTER(_.Var("item.LoginType"), ArangoOperator.Equal, _.TO_STRING(_.Val(userIdentity))));
+
+                var user = db.Query.IndexUserLogin(whereOperation).FirstOrDefault();
+
+                
+
                 if (user == null)
                 {
                     UserModel newUser = new UserModel()
                     {
                         UserId = Guid.NewGuid(),
                         EMailAddress = (!string.IsNullOrEmpty(email)) ? email : "none@void.com",
-                        Username = (!string.IsNullOrEmpty(username)) ? username : "New User " + documentSession.Query<UserModel>().Count(),
+                        Username = (!string.IsNullOrEmpty(username)) ? username : "New User " + db.Query.Count<UserModel>(),
                         LoginType = userIdentity,
                         FriendlyName = displayName
                     };
 
-                    documentSession.Store(newUser);
-                    documentSession.SaveChanges();
+                    db.Document.Create<UserModel>(ArangoModelBase.GetCollectionName<UserModel>(), newUser);
+
                     return this.LoginAndRedirect(newUser.UserId, DateTime.Now.AddDays(7));
                 }
 
-                return this.LoginAndRedirect(user.UserId, DateTime.Now.AddDays(7));
+                
+                return this.LoginAndRedirect(Guid.Parse(user.UserId), DateTime.Now.AddDays(7));
             };
         }
     }

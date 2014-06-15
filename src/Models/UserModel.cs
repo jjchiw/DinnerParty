@@ -5,7 +5,7 @@ using System.Web;
 
 namespace DinnerParty.Models
 {
-    public class UserModel
+    public class UserModel : ArangoModelBase
     {
         public string Id { get; set; }
         public Guid UserId { get; set; }

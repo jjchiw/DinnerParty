@@ -5,20 +5,20 @@ using System.Web;
 using Nancy.Security;
 using DinnerParty.Models;
 using Nancy.RouteHelpers;
-using Raven.Client;
+using Arango.Client;
 
 namespace DinnerParty.Modules
 {
     public class RSVPAuthorizedModule : BaseModule
     {
-        public RSVPAuthorizedModule(IDocumentSession documentSession)
+        public RSVPAuthorizedModule(ArangoDatabase db)
             : base("/RSVP")
         {
             this.RequiresAuthentication();
 
             Post["/Cancel/{id}"] = parameters =>
             {
-                Dinner dinner = documentSession.Load<Dinner>((int)parameters.id);
+                Dinner dinner = db.Document.Get<Dinner>(ArangoModelBase.BuildDocumentId<Dinner>(parameters.id));
 
                 RSVP rsvp = dinner.RSVPs
                     .Where(r => this.Context.CurrentUser.UserName == (r.AttendeeNameId ?? r.AttendeeName))
@@ -27,7 +27,7 @@ namespace DinnerParty.Modules
                 if (rsvp != null)
                 {
                     dinner.RSVPs.Remove(rsvp);
-                    documentSession.SaveChanges();
+                    db.Document.Update<Dinner>(dinner);
 
                 }
 
@@ -36,7 +36,7 @@ namespace DinnerParty.Modules
 
             Post["/Register/{id}"] = parameters =>
             {
-                Dinner dinner = documentSession.Load<Dinner>((int)parameters.id);
+                Dinner dinner = db.Document.Get<Dinner>(ArangoModelBase.BuildDocumentId<Dinner>(parameters.id));
 
                 if (!dinner.IsUserRegistered(this.Context.CurrentUser.UserName))
                 {
@@ -47,7 +47,7 @@ namespace DinnerParty.Modules
 
                     dinner.RSVPs.Add(rsvp);
 
-                    documentSession.SaveChanges(); 
+                    db.Document.Update<Dinner>(dinner);
                 }
 
                 return "Thanks - we'll see you there!";
