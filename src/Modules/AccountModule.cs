@@ -13,12 +13,13 @@ using System.Net;
 using Newtonsoft.Json;
 using Arango.Client;
 using DinnerParty.Infrastructure;
+using DinnerParty.Data;
 
 namespace DinnerParty.Modules
 {
     public class AccountModule : BaseModule
     {
-        public AccountModule(ArangoDatabase db)
+        public AccountModule(ArangoStore _store)
             : base("/account")
         {
             Get["/logon"] = parameters =>
@@ -36,7 +37,7 @@ namespace DinnerParty.Modules
                     var model = this.Bind<LoginModel>();
                     var result = this.Validate(model);
 
-                    var userMapper = new UserMapper(db);
+                    var userMapper = new UserMapper(_store);
                     var userGuid = userMapper.ValidateUser(model.UserName, model.Password);
 
                     if (userGuid == null || !result.IsValid)
@@ -115,7 +116,7 @@ namespace DinnerParty.Modules
                         return View["Register", base.Model];
                     }
 
-                    var userMapper = new UserMapper(db);
+                    var userMapper = new UserMapper(_store);
                     var userGUID = userMapper.ValidateRegisterNewUser(model);
 
                     //User already exists
@@ -174,7 +175,7 @@ namespace DinnerParty.Modules
                 var whereOperation = new ArangoQueryOperation().Aql(_ =>
                               _.FILTER(_.Var("item.LoginType"), ArangoOperator.Equal, _.TO_STRING(_.Val(userIdentity))));
 
-                var user = db.Query.IndexUserLogin(whereOperation).FirstOrDefault();
+                var user = _store.Query<UserModel, IndexUserLogin>(whereOperation).FirstOrDefault();
 
                 
 
@@ -184,18 +185,18 @@ namespace DinnerParty.Modules
                     {
                         UserId = Guid.NewGuid(),
                         EMailAddress = (!string.IsNullOrEmpty(email)) ? email : "none@void.com",
-                        Username = (!string.IsNullOrEmpty(username)) ? username : "New User " + db.Query.Count<UserModel>(),
+                        Username = (!string.IsNullOrEmpty(username)) ? username : "New User " + _store.Count<UserModel>(),
                         LoginType = userIdentity,
                         FriendlyName = displayName
                     };
 
-                    db.Document.Create<UserModel>(ArangoModelBase.GetCollectionName<UserModel>(), newUser);
+                    _store.Create<UserModel>(newUser);
 
                     return this.LoginAndRedirect(newUser.UserId, DateTime.Now.AddDays(7));
                 }
 
                 
-                return this.LoginAndRedirect(Guid.Parse(user.UserId), DateTime.Now.AddDays(7));
+                return this.LoginAndRedirect(user.UserId, DateTime.Now.AddDays(7));
             };
         }
     }

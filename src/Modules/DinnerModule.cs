@@ -14,17 +14,18 @@ using Nancy.Validation;
 using System.ComponentModel;
 using Arango.Client;
 using DinnerParty.Infrastructure;
+using DinnerParty.Data;
 
 namespace DinnerParty.Modules
 {
     public class DinnerModule : BaseModule
     {
-        private readonly ArangoDatabase _db;
+        private readonly ArangoStore _store;
         private const int PageSize = 25;
 
-        public DinnerModule(ArangoDatabase db)
+        public DinnerModule(ArangoStore store)
         {
-            this._db = db;
+            this._store = store;
             const string basePath = "/dinners";
 
             Get[basePath] = Dinners;
@@ -37,7 +38,7 @@ namespace DinnerParty.Modules
                     return 404;
                 }
 
-                Dinner dinner = _db.Document.Get<Dinner>(ArangoModelBase.BuildDocumentId<Dinner>(parameters.id));
+                Dinner dinner = _store.Get<Dinner>(parameters.id);
 
                 if (dinner == null)
                 {
@@ -68,7 +69,7 @@ namespace DinnerParty.Modules
                                .SORT(_.Var("item.EventDate"))
                      );
 
-                 dinners = _db.Query.WhereQuery<Dinner>(op);
+                 dinners = _store.Query<Dinner>(op);
             }
             else
             {
@@ -78,7 +79,7 @@ namespace DinnerParty.Modules
 
                 ArangoQueryOperation op = new ArangoQueryOperation().Aql(where);
 
-                dinners = _db.Query.GetQuery<Dinner>(op);
+                dinners = _store.Query<Dinner>(op);
             }
 
             int pageIndex = parameters.pagenumber.HasValue && !String.IsNullOrWhiteSpace(parameters.pagenumber) ? parameters.pagenumber : 1;
@@ -91,7 +92,7 @@ namespace DinnerParty.Modules
 
     public class DinnerModuleAuth : BaseModule
     {
-        public DinnerModuleAuth(ArangoDatabase db)
+        public DinnerModuleAuth(ArangoStore store)
             : base("/dinners")
         {
             this.RequiresAuthentication();
@@ -128,7 +129,7 @@ namespace DinnerParty.Modules
                         dinner.RSVPs = new List<RSVP>();
                         dinner.RSVPs.Add(rsvp);
 
-                        db.Document.Create<Dinner>(ArangoModelBase.GetCollectionName<Dinner>(), dinner);
+                        store.Create<Dinner>(dinner);
 
 
                         return this.Response.AsRedirect("/dinners/" + dinner.Id);
@@ -155,7 +156,7 @@ namespace DinnerParty.Modules
 
             Get["/delete/" + Route.AnyIntAtLeastOnce("id")] = parameters =>
                 {
-                    Dinner dinner = db.Document.Get<Dinner>(ArangoModelBase.BuildDocumentId<Dinner>(parameters.id));
+                    Dinner dinner = store.Get<Dinner>(parameters.id);
 
                     if (dinner == null)
                     {
@@ -178,7 +179,7 @@ namespace DinnerParty.Modules
 
             Post["/delete/" + Route.AnyIntAtLeastOnce("id")] = parameters =>
                 {
-                    Dinner dinner = db.Document.Get<Dinner>(ArangoModelBase.BuildDocumentId<Dinner>(parameters.id));
+                    Dinner dinner = store.Get<Dinner>(parameters.id);
 
                     if (dinner == null)
                     {
@@ -192,7 +193,7 @@ namespace DinnerParty.Modules
                         return View["InvalidOwner", base.Model];
                     }
 
-                    db.Document.Delete(dinner._Id);
+                    store.Delete<Dinner>(dinner._Id);
 
                     base.Page.Title = "Deleted";
                     return View["Deleted", base.Model];
@@ -200,7 +201,7 @@ namespace DinnerParty.Modules
 
             Get["/edit" + Route.And() + Route.AnyIntAtLeastOnce("id")] = parameters =>
                 {
-                    Dinner dinner = db.Document.Get<Dinner>(ArangoModelBase.BuildDocumentId<Dinner>(parameters.id));
+                    Dinner dinner = store.Get<Dinner>(parameters.id);
 
                     if (dinner == null)
                     {
@@ -222,7 +223,7 @@ namespace DinnerParty.Modules
 
             Post["/edit" + Route.And() + Route.AnyIntAtLeastOnce("id")] = parameters =>
                 {
-                    Dinner dinner = db.Document.Get<Dinner>(ArangoModelBase.BuildDocumentId<Dinner>(parameters.id));
+                    Dinner dinner = store.Get<Dinner>(parameters.id);
 
                     if (!dinner.IsHostedBy(this.Context.CurrentUser.UserName))
                     {
@@ -253,7 +254,7 @@ namespace DinnerParty.Modules
                         return View["Edit", base.Model];
                     }
 
-                    db.Document.Update<Dinner>(dinner);
+                    store.Update<Dinner>(dinner);
 
                     return this.Response.AsRedirect(string.Format("{0}/{1}", ModulePath, dinner.Id));
 
@@ -281,7 +282,7 @@ namespace DinnerParty.Modules
                                   .SORT(_.Var("item.EventDate"))
                         );
 
-                    var userDinners = db.Query.DinnersIndex(op).ToList();
+                    var userDinners = store.Query<Dinner, IndexDinner>(op).ToList();
 
                     base.Page.Title = "My Dinners";
                     base.Model.Dinners = userDinners;

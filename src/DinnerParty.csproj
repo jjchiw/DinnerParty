@@ -62,6 +62,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>packages\elmah.corelibrary.1.2.2\lib\Elmah.dll</HintPath>
     </Reference>
+    <Reference Include="Inflector">
+      <HintPath>packages\Inflector.1.0.0.0\lib\net45\Inflector.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net45">
       <HintPath>packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.1\lib\net45\Microsoft.CompilerServices.AsyncTargetingPack.Net45.dll</HintPath>
     </Reference>
@@ -282,6 +285,8 @@
   <ItemGroup>
     <Compile Include="BindExtensions.cs" />
     <Compile Include="Bootstrapper.cs" />
+    <Compile Include="Data\ArangoStore.cs" />
+    <Compile Include="Data\IArangoViewIndex.cs" />
     <Compile Include="Helpers\CountryList.cs" />
     <Compile Include="Helpers\DinnerPartyConfiguration.cs" />
     <Compile Include="Helpers\RSSResult.cs">
@@ -296,7 +301,7 @@
     <Compile Include="Models\DinnerModel.cs" />
     <Compile Include="Models\ErrorModel.cs" />
     <Compile Include="Models\Home.cs" />
-    <Compile Include="Models\ArangoModelBase.cs" />
+    <Compile Include="Data\ArangoModelBase.cs" />
     <Compile Include="Models\JsonDinner.cs" />
     <Compile Include="Models\PageModel.cs" />
     <Compile Include="Models\LoginModel.cs" />

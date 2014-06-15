@@ -6,12 +6,13 @@ using DinnerParty.Models;
 using Nancy;
 using Arango.Client;
 using DinnerParty.Infrastructure;
+using DinnerParty.Data;
 
 namespace DinnerParty.Modules
 {
     public class ServicesModule : BaseModule
     {
-        public ServicesModule(ArangoDatabase _db)
+        public ServicesModule(ArangoStore store)
             : base("/services")
         {
             Get["/RSS"] = parameters =>
@@ -24,7 +25,7 @@ namespace DinnerParty.Modules
 
                     ArangoQueryOperation whereOperation = new ArangoQueryOperation().Aql(where);
 
-                    var dinners = _db.Query.DinnersIndex(whereOperation)
+                    var dinners = store.Query<Dinner, IndexDinner>(whereOperation)
                         .Select(x =>
                             new Dinner
                             {

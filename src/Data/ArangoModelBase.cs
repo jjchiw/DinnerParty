@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 
-namespace DinnerParty.Models
+namespace DinnerParty.Data
 {
     public abstract class ArangoModelBase
     {
@@ -23,26 +23,6 @@ namespace DinnerParty.Models
 
                 return long.Parse(_Key);
             }
-        }
-
-        public static string GetCollectionName(Type t)
-        {
-            return t.Name + "Collection";
-        }
-
-        public static string GetCollectionName<T>()
-        {
-            return GetCollectionName(typeof(T));
-        }
-
-        public static string BuildDocumentId<T>(long id)
-        {
-            return BuildDocumentId(typeof(T), id);
-        }
-
-        public static string BuildDocumentId(Type t, long id)
-        {
-            return string.Format("{0}/{1}", GetCollectionName(t), id);
         }
     }
 }

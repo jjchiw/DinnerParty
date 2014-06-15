@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DinnerParty.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -7,7 +8,6 @@ namespace DinnerParty.Models
 {
     public class UserModel : ArangoModelBase
     {
-        public string Id { get; set; }
         public Guid UserId { get; set; }
         public string Username { get; set; }
         public string FriendlyName { get; set; }

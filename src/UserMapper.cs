@@ -8,16 +8,17 @@ using Nancy.Authentication.Forms;
 using Nancy.Security;
 using Arango.Client;
 using DinnerParty.Infrastructure;
+using DinnerParty.Data;
 
 namespace DinnerParty
 {
     public class UserMapper : IUserMapper
     {
-        private ArangoDatabase _db;
+        private ArangoStore _store;
 
-        public UserMapper(ArangoDatabase db)
+        public UserMapper(ArangoStore store)
         {
-            this._db = db;
+            this._store = store;
 
         }
 
@@ -27,7 +28,7 @@ namespace DinnerParty
                                 _.FILTER(_.Var("item.UserId"), ArangoOperator.Equal, _.Val(identifier.ToString())
                                 ));
 
-            var userRecord = _db.Query.IndexUserLogin(whereOperation).FirstOrDefault();
+            var userRecord = _store.Query<UserModel, IndexUserLogin>(whereOperation).FirstOrDefault();
 
             return userRecord == null ? null : new UserIdentity() { UserName = userRecord.Username, FriendlyName = userRecord.FriendlyName };
         }
@@ -39,14 +40,14 @@ namespace DinnerParty
                                .AND(_.Var("item.Password"), ArangoOperator.Equal, _.TO_STRING(_.Val(EncodePassword(password)))
                                )));
 
-            var userRecord = _db.Query.IndexUserLogin(whereOperation).FirstOrDefault();
+            var userRecord = _store.Query<UserModel, IndexUserLogin>(whereOperation).FirstOrDefault();
 
             if (userRecord == null)
             {
                 return null;
             }
 
-            return Guid.Parse(userRecord.UserId);
+            return userRecord.UserId;
         }
 
         public Guid? ValidateRegisterNewUser(RegisterModel newUser)
@@ -66,12 +67,12 @@ namespace DinnerParty
                                .AND(_.Var("item.LoginType"), ArangoOperator.Equal, _.TO_STRING(_.Val("DinnerParty")))
                                ));
 
-            var existingUser = _db.Query.IndexUserLogin(whereOperation).FirstOrDefault();
+            var existingUser = _store.Query<UserModel, IndexUserLogin>(whereOperation).FirstOrDefault();
 
             if (existingUser != null)
                 return null;
 
-            _db.Document.Create<UserModel>(ArangoModelBase.GetCollectionName<UserModel>(), userRecord);
+            _store.Create<UserModel>(userRecord);
 
             return userRecord.UserId;
         }

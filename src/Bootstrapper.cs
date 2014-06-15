@@ -10,6 +10,7 @@ using DinnerParty.Models;
 using System.Linq;
 using Arango.Client;
 using DinnerParty.Helpers;
+using DinnerParty.Data;
 
 namespace DinnerParty
 {
@@ -19,28 +20,7 @@ namespace DinnerParty
         {
             base.ApplicationStartup(container, pipelines);
 
-#if !DEBUG
-            Cassette.Nancy.CassetteNancyStartup.OptimizeOutput = true;
-#endif
-            EnsureCollectionsExists();
-
-            //DataAnnotationsValidator.RegisterAdapter(typeof(MatchAttribute), (v, d) => new CustomDataAdapter((MatchAttribute) v));
-
-            //var validatorFactory = new DefaultPropertyValidatorFactory(new IDataAnnotationsValidatorAdapter[]{
-            //    new CustomDataAdapter()
-            //});
-
-            
-            
-
-
-
-            
-            //var docStore = container.Resolve<DocumentStore>("DocStore");
-
-            //CleanUpDB(docStore);
-
-            //Raven.Client.Indexes.IndexCreation.CreateIndexes(typeof(Dinners_Index).Assembly, docStore);
+            //EnsureCollectionsExists();
 
             pipelines.OnError += (context, exception) =>
             {
@@ -49,30 +29,30 @@ namespace DinnerParty
             };
         }
 
-        private static void EnsureCollectionsExists()
-        {
-            var type = typeof(ArangoModelBase);
-            var types = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(s => s.GetTypes())
-                .Where(p => type.IsAssignableFrom(p) && !p.IsInterface && !p.IsAbstract)
-                .ToList();
+        //private static void EnsureCollectionsExists()
+        //{
+        //    var type = typeof(ArangoModelBase);
+        //    var types = AppDomain.CurrentDomain.GetAssemblies()
+        //        .SelectMany(s => s.GetTypes())
+        //        .Where(p => type.IsAssignableFrom(p) && !p.IsInterface && !p.IsAbstract)
+        //        .ToList();
 
 
-            foreach (var t in types)
-            {
-                var db = new ArangoDatabase(DinnerPartyConfiguration.ArangoDbAlias);
-                var collectionName = ArangoModelBase.GetCollectionName(t);
+        //    foreach (var t in types)
+        //    {
+        //        var db = new ArangoDatabase(DinnerPartyConfiguration.ArangoDbAlias);
+        //        var collectionName = ArangoModelBase.GetCollectionName(t);
 
-                var collection = db.Collection.Get(collectionName);
-                if (collection == null)
-                {
-                    collection = new ArangoCollection();
-                    collection.Name = collectionName;
-                    collection.Type = ArangoCollectionType.Document;
-                    db.Collection.Create(collection);
-                }
-            }
-        }
+        //        var collection = db.Collection.Get(collectionName);
+        //        if (collection == null)
+        //        {
+        //            collection = new ArangoCollection();
+        //            collection.Name = collectionName;
+        //            collection.Type = ArangoCollectionType.Document;
+        //            db.Collection.Create(collection);
+        //        }
+        //    }
+        //}
 
         protected override void ConfigureApplicationContainer(TinyIoCContainer container)
         {
@@ -84,8 +64,8 @@ namespace DinnerParty
                 DinnerPartyConfiguration.ArangoDbName,
                 DinnerPartyConfiguration.ArangoDbAlias);
 
-            var db = new ArangoDatabase(DinnerPartyConfiguration.ArangoDbAlias);
-            container.Register<ArangoDatabase>(db);
+            var store = new ArangoStore(DinnerPartyConfiguration.ArangoDbAlias);
+            container.Register<ArangoStore>(store);
         }
 
         protected override void RequestStartup(TinyIoCContainer container, Nancy.Bootstrapper.IPipelines pipelines, NancyContext context)

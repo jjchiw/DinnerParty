@@ -7,6 +7,7 @@ using DinnerParty.Models;
 using Nancy.RouteHelpers;
 using Arango.Client;
 using DinnerParty.Infrastructure;
+using DinnerParty.Data;
 
 namespace DinnerParty.Modules
 {
@@ -14,7 +15,7 @@ namespace DinnerParty.Modules
 
     public class SearchModule : BaseModule
     {
-        public SearchModule(ArangoDatabase db)
+        public SearchModule(ArangoStore store)
             : base("/search")
         {
             Post["/GetMostPopularDinners"] = parameters =>
@@ -33,7 +34,7 @@ namespace DinnerParty.Modules
 
                     var sortOperation = new ArangoQueryOperation().Aql(_ => _.SORT(_.Var("item.RSVPCount")).Direction(ArangoSortDirection.DESC));
 
-                    var jsonDinners = db.Query.DinnersIndex(whereOperation, sortOperation)
+                    var jsonDinners = store.Query<Dinner, IndexDinner>(whereOperation, sortOperation)
                                                 .Select(x => JsonDinnerFromDinner(x));
 
                     return Response.AsJson(jsonDinners);
@@ -55,7 +56,7 @@ namespace DinnerParty.Modules
 
                 var sortOperation = new ArangoQueryOperation().Aql(_ => _.SORT(_.Var("item.RSVPCount")).Direction(ArangoSortDirection.DESC));
 
-                var dinners = db.Query.DinnersIndex(whereOperation, sortOperation)
+                var dinners = store.Query<Dinner, IndexDinner>(whereOperation, sortOperation)
                                             .AsEnumerable()
                                             .Where(x => DistanceBetween(x.Latitude, x.Longitude, latitude, longitude) < 1000)
                                             .Select(x => JsonDinnerFromDinner(x));

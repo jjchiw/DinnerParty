@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Newtonsoft.Json;
 using Arango.Client;
+using DinnerParty.Data;
 
 namespace DinnerParty.Models
 {
