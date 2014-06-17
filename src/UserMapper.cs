@@ -8,15 +8,15 @@ using Nancy.Authentication.Forms;
 using Nancy.Security;
 using Arango.Client;
 using DinnerParty.Infrastructure;
-using DinnerParty.Data;
+using Commons.ArangoDb;
 
 namespace DinnerParty
 {
     public class UserMapper : IUserMapper
     {
-        private ArangoStore _store;
+        private IArangoStoreDb _store;
 
-        public UserMapper(ArangoStore store)
+        public UserMapper(IArangoStoreDb store)
         {
             this._store = store;
 
@@ -30,7 +30,7 @@ namespace DinnerParty
 
             var userRecord = _store.Query<UserModel, IndexUserLogin>(whereOperation).FirstOrDefault();
 
-            return userRecord == null ? null : new UserIdentity() { UserName = userRecord.Username, FriendlyName = userRecord.FriendlyName };
+            return userRecord == null ? null : new UserIdentity() { UserName = userRecord.Username, FriendlyName = userRecord.FriendlyName, Id = userRecord._Id };
         }
 
         public Guid? ValidateUser(string username, string password)

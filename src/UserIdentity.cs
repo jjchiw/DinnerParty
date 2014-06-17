@@ -20,6 +20,12 @@ namespace DinnerParty
             set;
         }
 
+        public string Id
+        {
+            get;
+            set;
+        }
+
         public string FriendlyName { get; set; }
 
       

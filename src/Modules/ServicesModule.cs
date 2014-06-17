@@ -6,13 +6,13 @@ using DinnerParty.Models;
 using Nancy;
 using Arango.Client;
 using DinnerParty.Infrastructure;
-using DinnerParty.Data;
+using Commons.ArangoDb;
 
 namespace DinnerParty.Modules
 {
     public class ServicesModule : BaseModule
     {
-        public ServicesModule(ArangoStore store)
+        public ServicesModule(IArangoStoreDb store)
             : base("/services")
         {
             Get["/RSS"] = parameters =>

@@ -285,7 +285,11 @@
   <ItemGroup>
     <Compile Include="BindExtensions.cs" />
     <Compile Include="Bootstrapper.cs" />
-    <Compile Include="Data\ArangoStore.cs" />
+    <Compile Include="Data\ArangoBaseEdgeModel.cs" />
+    <Compile Include="Data\ArangoBaseModel.cs" />
+    <Compile Include="Data\ArangoStoreDb.cs" />
+    <Compile Include="Data\ArangoStoreEventArgs.cs" />
+    <Compile Include="Data\IArangoStoreDb.cs" />
     <Compile Include="Data\IArangoViewIndex.cs" />
     <Compile Include="Helpers\CountryList.cs" />
     <Compile Include="Helpers\DinnerPartyConfiguration.cs" />
@@ -294,14 +298,14 @@
     </Compile>
     <Compile Include="Helpers\StringExtensions.cs" />
     <Compile Include="HTMLExtensions\HtmlExtensions.cs" />
-    <Compile Include="Infrastructure\ArangoDatabaseQueryExtensions.cs" />
+    <Compile Include="Infrastructure\IndexDinner.cs" />
+    <Compile Include="Infrastructure\IndexUserLogin.cs" />
     <Compile Include="Models\Config.cs" />
     <Compile Include="Models\CustomAnnotations\CustomDataAdapter.cs" />
     <Compile Include="Models\CustomAnnotations\CustomDataAnnotations.cs" />
     <Compile Include="Models\DinnerModel.cs" />
     <Compile Include="Models\ErrorModel.cs" />
     <Compile Include="Models\Home.cs" />
-    <Compile Include="Data\ArangoModelBase.cs" />
     <Compile Include="Models\JsonDinner.cs" />
     <Compile Include="Models\PageModel.cs" />
     <Compile Include="Models\LoginModel.cs" />

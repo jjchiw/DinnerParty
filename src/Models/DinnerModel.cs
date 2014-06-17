@@ -4,11 +4,12 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Newtonsoft.Json;
 using Arango.Client;
-using DinnerParty.Data;
+using Commons.ArangoDb;
+
 
 namespace DinnerParty.Models
 {
-    public class Dinner : ArangoModelBase
+    public class Dinner : ArangoBaseModel
     {
         
         [Required(ErrorMessage = "Title is required")]
@@ -47,6 +48,7 @@ namespace DinnerParty.Models
 
         public string HostedById { get; set; }
 
+        [ArangoProperty(Serializable=false)]
         public List<RSVP> RSVPs { get; set; }
 
         public bool IsHostedBy(string userName)

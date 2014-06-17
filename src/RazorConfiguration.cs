@@ -16,6 +16,7 @@ namespace DinnerParty
             yield return "Nancy";
             yield return "PagedList";
             yield return "System.Configuration";
+            yield return "Commons.ArangoDb";
         }
 
         public IEnumerable<string> GetDefaultNamespaces()
@@ -28,6 +29,7 @@ namespace DinnerParty
             yield return "System.Collections.Generic";
             yield return "System.Linq";
             yield return "System.Configuration";
+            yield return "Commons.ArangoDb";
         }
 
         public bool AutoIncludeModelNamespace

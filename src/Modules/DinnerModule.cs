@@ -14,16 +14,16 @@ using Nancy.Validation;
 using System.ComponentModel;
 using Arango.Client;
 using DinnerParty.Infrastructure;
-using DinnerParty.Data;
+using Commons.ArangoDb;
 
 namespace DinnerParty.Modules
 {
     public class DinnerModule : BaseModule
     {
-        private readonly ArangoStore _store;
+        private readonly IArangoStoreDb _store;
         private const int PageSize = 25;
 
-        public DinnerModule(ArangoStore store)
+        public DinnerModule(IArangoStoreDb store)
         {
             this._store = store;
             const string basePath = "/dinners";
@@ -38,7 +38,10 @@ namespace DinnerParty.Modules
                     return 404;
                 }
 
-                Dinner dinner = _store.Get<Dinner>(parameters.id);
+                ArangoQueryOperation op = new ArangoQueryOperation();
+                op.Aql(_ => _.FILTER(_.Var("item._key"), ArangoOperator.Equal, _.Val(parameters.id.ToString())));
+
+                Dinner dinner = _store.Single<Dinner, IndexDinner>(op);
 
                 if (dinner == null)
                 {
@@ -92,7 +95,7 @@ namespace DinnerParty.Modules
 
     public class DinnerModuleAuth : BaseModule
     {
-        public DinnerModuleAuth(ArangoStore store)
+        public DinnerModuleAuth(IArangoStoreDb store)
             : base("/dinners")
         {
             this.RequiresAuthentication();
@@ -122,14 +125,16 @@ namespace DinnerParty.Modules
                         dinner.HostedById = nerd.UserName;
                         dinner.HostedBy = nerd.FriendlyName;
 
+                        store.Create<Dinner>(dinner);
+
                         RSVP rsvp = new RSVP();
                         rsvp.AttendeeNameId = nerd.UserName;
                         rsvp.AttendeeName = nerd.FriendlyName;
+                        rsvp.ReservedAt = DateTime.Now;
+                        rsvp._From = dinner._Id;
+                        rsvp._To = nerd.Id;
 
-                        dinner.RSVPs = new List<RSVP>();
-                        dinner.RSVPs.Add(rsvp);
-
-                        store.Create<Dinner>(dinner);
+                        store.CreateEdge<RSVP>(rsvp);
 
 
                         return this.Response.AsRedirect("/dinners/" + dinner.Id);
@@ -267,12 +272,14 @@ namespace DinnerParty.Modules
                     var op = new ArangoQueryOperation();
                     op.Aql(_ => _.LET("RSVPs_AttendeeNameList").List(_
                                 .FOR("rsvp")
-                                .Var("item.RSVPs")
+                                .Var(ArangoStoreDb.GetEdgeCollectionName<RSVP>())
+                                .FILTER(_.Var("rsvp._from"), ArangoOperator.Equal, _.Var("item._id"))
                                 .RETURN.Var("rsvp.AttendeeName")
                                 )
                                  .LET("RSVPs_AttendeeNameIdList").List(_
                                     .FOR("rsvp")
-                                    .Var("item.RSVPs")
+                                    .Var(ArangoStoreDb.GetEdgeCollectionName<RSVP>())
+                                    .FILTER(_.Var("rsvp._from"), ArangoOperator.Equal, _.Var("item._id"))
                                     .RETURN.Var("rsvp.AttendeeNameId")
                                 )
                                 .FILTER(_.Var("item.HostedById"), ArangoOperator.Equal, _.Val(nerdName))

@@ -7,7 +7,7 @@ using DinnerParty.Models;
 using Nancy.RouteHelpers;
 using Arango.Client;
 using DinnerParty.Infrastructure;
-using DinnerParty.Data;
+using Commons.ArangoDb;
 
 namespace DinnerParty.Modules
 {
@@ -15,7 +15,7 @@ namespace DinnerParty.Modules
 
     public class SearchModule : BaseModule
     {
-        public SearchModule(ArangoStore store)
+        public SearchModule(IArangoStoreDb store)
             : base("/search")
         {
             Post["/GetMostPopularDinners"] = parameters =>

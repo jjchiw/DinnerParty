@@ -13,6 +13,6 @@
 	<i> @Model.Dinner.Title ? </i> </p>
 </div>
 	
-<form action="/dinners/delete/@Model.Dinner.DinnerID" method="post" >
+<form action="/dinners/delete/@Model.Dinner._Key" method="post" >
 	<input name="confirmButton" type="submit" value="Delete" />        
 </form>

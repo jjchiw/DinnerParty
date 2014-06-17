@@ -10,7 +10,7 @@ using DinnerParty.Models;
 using System.Linq;
 using Arango.Client;
 using DinnerParty.Helpers;
-using DinnerParty.Data;
+using Commons.ArangoDb;
 
 namespace DinnerParty
 {
@@ -20,39 +20,12 @@ namespace DinnerParty
         {
             base.ApplicationStartup(container, pipelines);
 
-            //EnsureCollectionsExists();
-
             pipelines.OnError += (context, exception) =>
             {
                 Elmah.ErrorSignal.FromCurrentContext().Raise(exception);
                 return null;
             };
         }
-
-        //private static void EnsureCollectionsExists()
-        //{
-        //    var type = typeof(ArangoModelBase);
-        //    var types = AppDomain.CurrentDomain.GetAssemblies()
-        //        .SelectMany(s => s.GetTypes())
-        //        .Where(p => type.IsAssignableFrom(p) && !p.IsInterface && !p.IsAbstract)
-        //        .ToList();
-
-
-        //    foreach (var t in types)
-        //    {
-        //        var db = new ArangoDatabase(DinnerPartyConfiguration.ArangoDbAlias);
-        //        var collectionName = ArangoModelBase.GetCollectionName(t);
-
-        //        var collection = db.Collection.Get(collectionName);
-        //        if (collection == null)
-        //        {
-        //            collection = new ArangoCollection();
-        //            collection.Name = collectionName;
-        //            collection.Type = ArangoCollectionType.Document;
-        //            db.Collection.Create(collection);
-        //        }
-        //    }
-        //}
 
         protected override void ConfigureApplicationContainer(TinyIoCContainer container)
         {
@@ -64,8 +37,8 @@ namespace DinnerParty
                 DinnerPartyConfiguration.ArangoDbName,
                 DinnerPartyConfiguration.ArangoDbAlias);
 
-            var store = new ArangoStore(DinnerPartyConfiguration.ArangoDbAlias);
-            container.Register<ArangoStore>(store);
+            var store = new ArangoStoreDb(DinnerPartyConfiguration.ArangoDbAlias);
+            container.Register<IArangoStoreDb>(store);
         }
 
         protected override void RequestStartup(TinyIoCContainer container, Nancy.Bootstrapper.IPipelines pipelines, NancyContext context)

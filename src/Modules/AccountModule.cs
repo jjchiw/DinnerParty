@@ -13,13 +13,13 @@ using System.Net;
 using Newtonsoft.Json;
 using Arango.Client;
 using DinnerParty.Infrastructure;
-using DinnerParty.Data;
+using Commons.ArangoDb;
 
 namespace DinnerParty.Modules
 {
     public class AccountModule : BaseModule
     {
-        public AccountModule(ArangoStore _store)
+        public AccountModule(IArangoStoreDb _store)
             : base("/account")
         {
             Get["/logon"] = parameters =>

@@ -1,12 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Commons.ArangoDb;
+using System.ComponentModel.DataAnnotations;
+using System;
 
 namespace DinnerParty.Models
 {
-    public class RSVP
+    public class RSVP : ArangoBaseEdgeModel
     {
-        public int RsvpID { get; set; }
-        public int DinnerID { get; set; }
         public string AttendeeName { get; set; }
         public string AttendeeNameId { get; set; }
+        public DateTime ReservedAt { get; set; }
     }
 }
